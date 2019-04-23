@@ -2,7 +2,6 @@ package model
 
 import (
 	"database/sql"
-	"fmt"
 	"shuSemester/infrastructure"
 	"time"
 )
