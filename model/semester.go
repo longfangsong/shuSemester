@@ -112,22 +112,26 @@ func saveHoliday(holiday Holiday, semesterId int64) {
 }
 
 func Save(semester Semester) {
-	if semester.Id != 0 {
+	if semester.Id == 0 {
+		row := infrastructure.DB.QueryRow(`
+		INSERT INTO semester(name, dateRange) 
+		VALUES ($1,daterange($2,$3))
+		RETURNING id;
+		`, semester.Name, semester.Start, semester.End)
+		var id int64
+		_ = row.Scan(&id)
+		for _, holiday := range semester.Holidays {
+			saveHoliday(holiday, id)
+		}
+	} else {
 		_, _ = infrastructure.DB.Exec(`
-		DELETE FROM semester WHERE id=$1;
-		`, semester.Id)
-	}
-	_, _ = infrastructure.DB.Exec(`
-		DELETE FROM semester WHERE name=$1;
-		`, semester.Name)
-	row := infrastructure.DB.QueryRow(`
-	INSERT INTO semester(name, dateRange) 
-	VALUES ($1,daterange($2,$3))
-	RETURNING id;
-	`, semester.Name, semester.Start, semester.End)
-	var id int64
-	_ = row.Scan(&id)
-	for _, holiday := range semester.Holidays {
-		saveHoliday(holiday, id)
+		UPDATE semester
+		SET name=$2,
+		    dateRange=daterange($3,$4)
+		WHERE id=$1;
+		`, semester.Id, semester.Name, semester.Start, semester.End)
+		for _, holiday := range semester.Holidays {
+			saveHoliday(holiday, semester.Id)
+		}
 	}
 }
