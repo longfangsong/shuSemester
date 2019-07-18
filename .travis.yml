@@ -12,14 +12,14 @@ jobs:
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         - docker tag shu-semester $DOCKER_USERNAME/shu-semester:$TRAVIS_BUILD_ID
         - docker push $DOCKER_USERNAME/shu-semester
-    - stage: deploy
-      language: minimal
-      before_install:
-        - openssl aes-256-cbc -K $encrypted_6259c17b3eec_key -iv $encrypted_6259c17b3eec_iv
-          -in deploy_rsa.enc -out deploy_rsa -d
-        - eval "$(ssh-agent -s)"
-        - chmod 600 ./deploy_rsa
-        - ssh-add ./deploy_rsa
-      script:
-        - ssh -i ./deploy_rsa root@cloud.shu.xn--io0a7i ./changeImage.sh semester $DOCKER_USERNAME/shu-semester:$TRAVIS_BUILD_ID
-        - ssh -i ./deploy_rsa root@cloud.shu.xn--io0a7i ./restart-nginx.sh
+#    - stage: deploy
+#      language: minimal
+#      before_install:
+#        - openssl aes-256-cbc -K $encrypted_6259c17b3eec_key -iv $encrypted_6259c17b3eec_iv
+#          -in deploy_rsa.enc -out deploy_rsa -d
+#        - eval "$(ssh-agent -s)"
+#        - chmod 600 ./deploy_rsa
+#        - ssh-add ./deploy_rsa
+#      script:
+#        - ssh -i ./deploy_rsa root@cloud.shu.xn--io0a7i ./changeImage.sh semester $DOCKER_USERNAME/shu-semester:$TRAVIS_BUILD_ID
+#        - ssh -i ./deploy_rsa root@cloud.shu.xn--io0a7i ./restart-nginx.sh
