@@ -1,5 +1,5 @@
 # shuSemester
-![travis-build-status](https://www.travis-ci.com/shuosc/SHUVolunteer.svg?branch=master)
+![travis-build-status](https://www.travis-ci.com/shuosc/shuSemester.svg?branch=master)
 
 上大学期信息管理服务。
 
