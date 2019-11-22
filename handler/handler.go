@@ -55,6 +55,8 @@ func SemesterHandler(w http.ResponseWriter, r *http.Request) {
 		getSemesterHandler(w, r)
 	case "POST":
 		setSemesterHandler(w, r)
+	case "PUT":
+		setSemesterHandler(w, r)
 	}
 }
 

@@ -99,16 +99,31 @@ func saveShift(shift Shift, holidayId int64) {
 }
 
 func saveHoliday(holiday Holiday, semesterId int64) {
-	row := infrastructure.DB.QueryRow(`
-	INSERT INTO holiday(name, belongTo, dateRange) 
-	VALUES ($1,$2,daterange($3,$4))
-	RETURNING id;
-	`, holiday.Name, semesterId, holiday.Start, holiday.End)
-	var id int64
-	_ = row.Scan(&id)
-	for _, shift := range holiday.Shifts {
-		saveShift(shift, id)
+	if holiday.Id == 0 {
+		row := infrastructure.DB.QueryRow(`
+			INSERT INTO holiday(name, belongTo, dateRange) 
+			VALUES ($1,$2,daterange($3,$4))
+			RETURNING id;
+		`, holiday.Name, semesterId, holiday.Start, holiday.End)
+		var id int64
+		_ = row.Scan(&id)
+		for _, shift := range holiday.Shifts {
+			saveShift(shift, id)
+		}
+	} else {
+		_, _ = infrastructure.DB.Exec(`
+		UPDATE holiday
+		SET name=$2, daterange=daterange($3,$4)
+		WHERE id=$1;
+		`, holiday.Id, holiday.Name, holiday.Start, holiday.End)
 	}
+}
+
+func deleteHoliday(holidayId int64) {
+	infrastructure.DB.Exec(`
+	DELETE FROM holiday
+	WHERE id=$1;
+	`, holidayId)
 }
 
 func Save(semester Semester) {
@@ -130,8 +145,31 @@ func Save(semester Semester) {
 		    dateRange=daterange($3,$4)
 		WHERE id=$1;
 		`, semester.Id, semester.Name, semester.Start, semester.End)
+
+		rows, _ := infrastructure.DB.Query(`
+			SELECT id
+			FROM holiday
+			where belongTo = $1;
+			`, semester.Id)
+		holidayIdExists := map[int64]bool{}
+		for rows.Next() {
+			var id int64
+			err := rows.Scan(&id)
+			if err != nil {
+				return
+			}
+			holidayIdExists[id] = false
+		}
 		for _, holiday := range semester.Holidays {
+			if holiday.Id != 0 {
+				holidayIdExists[holiday.Id] = true
+			}
 			saveHoliday(holiday, semester.Id)
+		}
+		for holidayId, existed := range holidayIdExists {
+			if !existed {
+				deleteHoliday(holidayId)
+			}
 		}
 	}
 }
