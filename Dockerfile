@@ -9,6 +9,8 @@ RUN go get && go build
 
 FROM alpine
 MAINTAINER longfangsong@icloud.com
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /zoneinfo.zip
+ENV ZONEINFO /zoneinfo.zip
 COPY --from=builder /go/src/shuSemester/web/web /
 COPY --from=builder /go/src/shuSemester/cli/cli /
 WORKDIR /
