@@ -33,7 +33,20 @@ type Semester struct {
 
 func fetchShift(rows *sql.Rows) (Shift, error) {
 	result := Shift{}
-	err := rows.Scan(&result.Id, &result.RestDate, &result.WorkDate)
+	var restDate, workDate string
+	err := rows.Scan(&result.Id, &restDate, &workDate)
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	result.WorkDate, err = time.ParseInLocation("2006-01-02", workDate[:len("2006-01-02")], zone)
+	if err != nil {
+		return result, err
+	}
+	result.RestDate, err = time.ParseInLocation("2006-01-02", restDate[:len("2006-01-02")], zone)
+	if err != nil {
+		return result, err
+	}
 	return result, err
 }
 
@@ -41,7 +54,20 @@ func fetchHoliday(rows *sql.Rows) (Holiday, error) {
 	result := Holiday{
 		Shifts: []Shift{},
 	}
-	err := rows.Scan(&result.Id, &result.Name, &result.Start, &result.End)
+	var start, end string
+	err := rows.Scan(&result.Id, &result.Name, &start, &end)
+	if err != nil {
+		return result, err
+	}
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	result.Start, err = time.ParseInLocation("2006-01-02", start[:len("2006-01-02")], zone)
+	if err != nil {
+		return result, err
+	}
+	result.End, err = time.ParseInLocation("2006-01-02", end[:len("2006-01-02")], zone)
 	if err != nil {
 		return result, err
 	}
