@@ -67,12 +67,22 @@ func GetByDate(date time.Time) (Semester, error) {
 	result := Semester{
 		Holidays: []Holiday{},
 	}
+	var start, end string
 	row := infrastructure.DB.QueryRow(`
 	SELECT id, name, lower(dateRange), upper(dateRange)
 	FROM semester
 	where ($1)::date <@ dateRange;
 	`, date)
-	err := row.Scan(&result.Id, &result.Name, &result.Start, &result.End)
+	err := row.Scan(&result.Id, &result.Name, &start, &end)
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	result.Start, err = time.ParseInLocation("2006-01-02", start[:len("2006-01-02")], zone)
+	if err != nil {
+		return result, err
+	}
+	result.End, err = time.ParseInLocation("2006-01-02", end[:len("2006-01-02")], zone)
 	if err != nil {
 		return result, err
 	}
@@ -92,6 +102,12 @@ func GetByDate(date time.Time) (Semester, error) {
 }
 
 func saveShift(shift Shift, holidayId int64) {
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	shift.WorkDate = shift.WorkDate.In(zone)
+	shift.RestDate = shift.RestDate.In(zone)
 	_, _ = infrastructure.DB.Exec(`
 	INSERT INTO shift(fromholiday, restdate, workdate) 
 	VALUES ($1, $2, $3);
@@ -99,6 +115,12 @@ func saveShift(shift Shift, holidayId int64) {
 }
 
 func saveHoliday(holiday Holiday, semesterId int64) {
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	holiday.Start = holiday.Start.In(zone)
+	holiday.End = holiday.End.In(zone)
 	if holiday.Id == 0 {
 		row := infrastructure.DB.QueryRow(`
 			INSERT INTO holiday(name, belongTo, dateRange) 
@@ -127,6 +149,12 @@ func deleteHoliday(holidayId int64) {
 }
 
 func Save(semester Semester) {
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	semester.Start = semester.Start.In(zone)
+	semester.End = semester.End.In(zone)
 	if semester.Id == 0 {
 		row := infrastructure.DB.QueryRow(`
 		INSERT INTO semester(name, dateRange) 
