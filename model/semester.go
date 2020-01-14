@@ -3,6 +3,7 @@ package model
 import (
 	"database/sql"
 	"shuSemester/infrastructure"
+	"strconv"
 	"time"
 )
 
@@ -89,17 +90,24 @@ func fetchHoliday(rows *sql.Rows) (Holiday, error) {
 	return result, nil
 }
 
-func GetByDate(date time.Time) (Semester, error) {
+func GetById(id string) (Semester, error) {
+	idNum, err := strconv.ParseInt(id, 10, 64)
 	result := Semester{
-		Holidays: []Holiday{},
+		Id: idNum,
+	}
+	if err != nil {
+		return result, err
 	}
 	var start, end string
 	row := infrastructure.DB.QueryRow(`
-	SELECT id, name, lower(dateRange), upper(dateRange)
+	SELECT name, lower(dateRange), upper(dateRange)
 	FROM semester
-	where ($1)::date <@ dateRange;
-	`, date)
-	err := row.Scan(&result.Id, &result.Name, &start, &end)
+	where semester.id=$1;
+	`, id)
+	err = row.Scan(&result.Name, &start, &end)
+	if err != nil {
+		return result, err
+	}
 	zone, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		panic(err)
@@ -112,17 +120,59 @@ func GetByDate(date time.Time) (Semester, error) {
 	if err != nil {
 		return result, err
 	}
+	result.Holidays, err = getHolidays(result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func getHolidays(result Semester) ([]Holiday, error) {
 	rows, _ := infrastructure.DB.Query(`
 	SELECT id, name, lower(dateRange), upper(dateRange)
 	FROM holiday
 	where belongTo = $1;
 	`, result.Id)
+	var holidays []Holiday
 	for rows.Next() {
 		holiday, err := fetchHoliday(rows)
 		if err != nil {
-			return result, err
+			return holidays, err
 		}
-		result.Holidays = append(result.Holidays, holiday)
+		holidays = append(holidays, holiday)
+	}
+	return holidays, nil
+}
+
+func GetByDate(date time.Time) (Semester, error) {
+	result := Semester{
+		Holidays: []Holiday{},
+	}
+	var start, end string
+	row := infrastructure.DB.QueryRow(`
+	SELECT id, name, lower(dateRange), upper(dateRange)
+	FROM semester
+	where ($1)::date <@ dateRange;
+	`, date)
+	err := row.Scan(&result.Id, &result.Name, &start, &end)
+	if err != nil {
+		return result, err
+	}
+	zone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	result.Start, err = time.ParseInLocation("2006-01-02", start[:len("2006-01-02")], zone)
+	if err != nil {
+		return result, err
+	}
+	result.End, err = time.ParseInLocation("2006-01-02", end[:len("2006-01-02")], zone)
+	if err != nil {
+		return result, err
+	}
+	result.Holidays, err = getHolidays(result)
+	if err != nil {
+		return result, err
 	}
 	return result, nil
 }

@@ -11,22 +11,32 @@ import (
 
 func getSemesterHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	dateString := r.URL.Query().Get("date")
-	var date time.Time
-	var err error = nil
-	if dateString == "now" {
-		date = time.Now()
+	var semester model.Semester
+	id := r.URL.Query().Get("id")
+	var err error
+	if id != "" {
+		semester, err = model.GetById(id)
+		if err != nil {
+			w.WriteHeader(404)
+			return
+		}
 	} else {
-		date, err = time.Parse("2006-01-02", dateString)
-	}
-	if err != nil {
-		w.WriteHeader(400)
-		return
-	}
-	semester, err := model.GetByDate(date)
-	if err != nil {
-		w.WriteHeader(404)
-		return
+		dateString := r.URL.Query().Get("date")
+		var date time.Time
+		if dateString == "now" {
+			date = time.Now()
+		} else {
+			date, err = time.Parse("2006-01-02", dateString)
+		}
+		if err != nil {
+			w.WriteHeader(400)
+			return
+		}
+		semester, err = model.GetByDate(date)
+		if err != nil {
+			w.WriteHeader(404)
+			return
+		}
 	}
 	data, _ := json.Marshal(semester)
 	_, _ = w.Write(data)
